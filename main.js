@@ -92,14 +92,16 @@ function Renderer(manager) {
           priority: $(this).val()
         });
       });
-    date = new Date(task.deadline);
 
     //deadline
+    var date = new Date(task.deadline);
     $deadline.find('input')
-      .val(date.getFullYear() + '-' + ((date.getMonth() < 10) ? '0' + date.getMonth() : date.getMonth()) + '-' + ((date.getDate() < 10) ? '0' + date.getDate() : date.getDate()) + 'T' + ((date.getHours() < 10) ? '0' + date.getHours() : date.getHours()) + ':' + ((date.getMinutes() < 10) ? '0' + date.getMinutes() : date.getMinutes()))
+      .val(date.getFullYear() + '-' + ((date.getMonth()+1 < 10) ? '0' + (date.getMonth()+1) : (date.getMonth()+1)) + '-' + ((date.getDate() < 10) ? '0' + date.getDate() : date.getDate()) + 'T' + ((date.getHours() < 10) ? '0' + date.getHours() : date.getHours()) + ':' + ((date.getMinutes() < 10) ? '0' + date.getMinutes() : date.getMinutes()))
       .on('change', function() {
+        var date = new Date($(this).val())/1 + (new Date()).getTimezoneOffset()*60000;
+        // console.log(date);
         _manager.update(task.id, {
-          deadline: $(this).val()
+          deadline: date
         });
       });
     $description.find('textarea')

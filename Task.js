@@ -5,7 +5,7 @@ function Task(property) {
     id: 0,
     title: "",
     description: "",
-    createdTime: new Date(),
+    createdTime: new Date()/1,
     modifiedTime: 0,
     deadline: 0,
     status: 0,

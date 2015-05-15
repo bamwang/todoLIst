@@ -1,0 +1,30 @@
+.main,
+.content
+#container{
+  position: relative;
+}
+
+#container{
+  margin: 0 auto;
+  width: 1000px;
+}
+
+#template{
+  display: none;
+}
+
+.tag{
+  min-width: 30px;
+}
+.tag>div{
+  float: left;
+}
+.close{
+  width: 1em;
+  height: 1em;
+}
+
+/* p{
+  height: 1em;
+  list-style: 1em;
+} */

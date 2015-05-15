@@ -31,9 +31,12 @@ function Renderer(manager) {
       var $item = $itemTemplate.clone();
       $item.attr('id', task.id);
       for (var key in task) {
+        var value = task[key];
         if (key === 'deadline')
           continue;
-        $item.find('.' + key + ' p').text(task[key]);
+        if(typeof value === 'string')
+          value = value.replace(/\n/g,'<br>');
+        $item.find('.' + key + ' p').html(value);
       }
       bind($item, task);
       $item.appendTo($container);
@@ -66,8 +69,12 @@ function Renderer(manager) {
       })
       .hide()
       .on('blur keyup', function(e) {
-        if (e.type === 'keyup' && e.keyCode !== 13)
+        if (e.type === 'keyup' && e.keyCode === 13){
+          $(this).blur();
           return;
+        }else if (e.type === 'keyup' && e.keyCode !== 13){
+          return;
+        }
         $(this).hide(0);
         $titleP.text($(this).val()).show();
       });
@@ -110,10 +117,14 @@ function Renderer(manager) {
       .hide()
       .on('blur keyup', function(e) {
 
-        if (e.type === 'keyup' && e.keyCode !== 91)
+        if (e.type === 'keyup' && e.keyCode === 91){
+          $(this).blur();
           return;
+        }else if (e.type === 'keyup' && e.keyCode !== 91){
+          return;
+        }
         $(this).hide(0);
-        $descriptionP.text($(this).val()).show();
+        $descriptionP.html($(this).val().replace(/\n/g,'<br>')).show();
       });
     $descriptionP.on('click', function() {
       $(this).hide(0, function() {
@@ -146,15 +157,19 @@ function Renderer(manager) {
       var $tagInput = $newTag.find('input');
       var $tagClose = $newTag.find('.close');
       $newTag.appendTo($tags);
-      $tagClose.on('click', function() {
-        $tagInput.val('');
-        $newTag.hide();
-      });
       $tagInput.on('blur keyup', function(e) {
         var tagText = $(this).val();
-        if (e.type === 'keyup' && e.keyCode !== 13 || tagText.length === 0)
+        if (e.type === 'keyup' && e.keyCode === 13){
+          $(this).blur();
           return;
+        }else if (e.type === 'keyup' && e.keyCode !== 13){
+          return;
+        }else if (e.type === 'keyup' && e.keyCode === 27){
+          $(this).val('');
+          $newTag.hide();
+        }
         var isAdded = manager.addTag(task.id, tagText);
+        console.log(isAdded)
         if (isAdded) {
           $(this).hide(0);
           $tagP.text($(this).val()).show();

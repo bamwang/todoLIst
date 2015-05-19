@@ -1,19 +1,7 @@
 // Controller
-var manager;
+// var manager;
 $(function() {
-  manager = new Manager();
-  // manager.add({
-  //   title: "teest",
-  //   description: "asdfasfasfasdf\nsadfas dfa  s   d as d  fas",
-  //   deadline: new Date() + 40000,
-  //   status: 1,
-  //   priority: 4,
-  //   tags: ["test", "tests"]
-  // });
-  // manager.add();
-  // manager.add();
-  // var data = manager.getAll();
-  // console.log(data);
+  var manager = new Manager();
   var renderer = new Renderer(manager);
   renderer.inflate();
 });
@@ -25,9 +13,10 @@ function Renderer(manager) {
   var $container = $('#container');
   var $itemTemplate = $('#template>.item');
   var $tagTemplate = $('#template>.tag');
-  this.inflate = function inflate() {
-    $container.html('');
-    manager.getAll().map(function(task, index) {
+  //情報を充填する
+  this.inflate = function inflate(key, order, conditions) {
+    $container.find('.item').remove();
+    manager.getSome(key, order, conditions ? conditions : []).map(function(task, index) {
       var $item = $itemTemplate.clone();
       $item.attr('id', task.id);
       for (var key in task) {
@@ -42,25 +31,32 @@ function Renderer(manager) {
       $item.appendTo($container);
     });
   };
+  //動的に動くようにハンドラーをバインドする
   var bind = function bind($item, task) {
     var $status = $item.find('.status');
     var $title = $item.find('.title');
+    var $titleP = $title.find('p');
     var $priority = $item.find('.priority');
     var $deadline = $item.find('.deadline');
     var $tags = $item.find('.tags');
     var $description = $item.find('.description');
     var $delete = $item.find('.delete');
+    var $show = $item.find('.show');
+    var $sub = $item.find('.sub');
     // status
     $status.find('input').prop('checked', task.status == 1)
       .on('change', function(e) {
         _manager.update(task.id, {
           status: ($(this).prop('checked')) ? 1 : 0
         });
+        if($(this).prop('checked'))
+          $titleP.addClass('done');
+        else
+          $titleP.removeClass('done');
       });
 
     //title
     var $titleInput = $title.find('input');
-    var $titleP = $title.find('p');
     $titleInput.val(task.title)
       .on('change', function() {
         _manager.update(task.id, {
@@ -69,7 +65,7 @@ function Renderer(manager) {
       })
       .hide()
       .on('blur keyup', function(e) {
-        if (e.type === 'keyup' && e.keyCode === 13){
+        if (e.type === 'keyup' && e.keyCode === 13){//エンターキー
           $(this).blur();
           return;
         }else if (e.type === 'keyup' && e.keyCode !== 13){
@@ -78,6 +74,8 @@ function Renderer(manager) {
         $(this).hide(0);
         $titleP.text($(this).val()).show();
       });
+      if(task.status===1)
+        $titleP.addClass('done');
     $titleP.on('click', function() {
       $(this).hide(0, function() {
         $titleInput.show().focus();
@@ -96,7 +94,7 @@ function Renderer(manager) {
     //deadline
     var date = new Date(task.deadline);
     $deadline.find('input')
-      .val(date.getFullYear() + '-' + ((date.getMonth()+1 < 10) ? '0' + (date.getMonth()+1) : (date.getMonth()+1)) + '-' + ((date.getDate() < 10) ? '0' + date.getDate() : date.getDate()) + 'T' + ((date.getHours() < 10) ? '0' + date.getHours() : date.getHours()) + ':' + ((date.getMinutes() < 10) ? '0' + date.getMinutes() : date.getMinutes()))
+      .val(date.getFullYear() + '-' + ((date.getMonth()+1 < 10) ? '0' + (date.getMonth()+1) : (date.getMonth()+1)) + '-' + ((date.getDate() < 10) ? '0' + date.getDate() : date.getDate()))
       .on('change', function() {
         var date = new Date($(this).val())/1 + (new Date()).getTimezoneOffset()*60000;
         // console.log(date);
@@ -118,7 +116,6 @@ function Renderer(manager) {
       })
       .hide()
       .on('blur keyup', function(e) {
-
         if (e.type === 'keyup' && e.keyCode === 91){
           $(this).blur();
           return;
@@ -130,7 +127,7 @@ function Renderer(manager) {
       });
     $descriptionP.on('click', function() {
       $(this).hide(0, function() {
-        $descriptionInput.show().focus();
+        $descriptionInput.show().height($(this).height()).focus();
       });
     });
 
@@ -159,36 +156,61 @@ function Renderer(manager) {
       var $tagInput = $newTag.find('input');
       var $tagClose = $newTag.find('.close');
       $newTag.appendTo($tags);
-      $tagInput.on('blur keyup', function(e) {
+      $tagClose.on('click',function(){
+        $(this).val('');
+        $newTag.hide();
+      });
+      $tagInput.on('keyup', function(e) {
         var tagText = $(this).val();
-        if (e.type === 'keyup' && e.keyCode === 13){
+        if ( e.keyCode !== 13 && e.keyCode !== 27 ){
+          return;
+        }else if (e.keyCode === 13){
           $(this).blur();
           return;
-        }else if (e.type === 'keyup' && e.keyCode !== 13){
-          return;
-        }else if (e.type === 'keyup' && e.keyCode === 27){
+        }else if (e.keyCode === 27){
           $(this).val('');
           $newTag.hide();
-        }
-        var isAdded = manager.addTag(task.id, tagText);
-        console.log(isAdded)
-        if (isAdded) {
-          $(this).hide(0);
-          $tagP.text($(this).val()).show();
-          $tagClose.off('click').on('click', function() {
-            $newTag.remove();
-            manager.removeTag(task.id, tagText);
-          });
-          appendNewTag();
-        }else{
-          alert('Tag exists');
+          $(this).off('blur');
         }
       });
+
       $tagsAdd.on('click', function() {
         $newTag.show();
+        $tagInput.focus().on('blur', function(){
+          var tagText = $(this).val();
+          if(!tagText){
+            $newTag.hide();
+            return;
+          }
+          var isAdded = manager.addTag(task.id, tagText);
+          if (isAdded) {
+            $(this).hide(0);
+            $tagP.text($(this).val()).show();
+            $tagClose.off('click').on('click', function() {
+              $newTag.remove();
+              manager.removeTag(task.id, tagText);
+            });
+            appendNewTag();
+          }else{
+            alert('Tag exists');
+          }
+        });
       });
       $newTag.after($tagsAdd).hide();
     }
+    //show
+    var open = false;
+    $show.on('click',function(){
+      if(open){
+        $sub.slideUp();
+        $show.text('▲');
+        open=false;
+      }else{
+        $show.text('▼');
+        $sub.slideDown();
+        open=true;
+      }
+    });
 
     //delete
     $delete.on('click', function() {
@@ -196,10 +218,14 @@ function Renderer(manager) {
       self.inflate();
     });
   };
-  (function($newContainer) {
+  (function bindNew($newContainer) {//新規追加
     $newItem = $itemTemplate.clone();
     $newItem.appendTo($newContainer);
-    $newItem.find('.delete').text('ADD').on('click', function onClick() {
+    $newItem.remove('.sub');
+    $show = $newItem.find('.tags').html('');
+    $show = $newItem.find('.show');
+    $show.html('');
+    $('<button>').text('+').appendTo($show).on('click', function onClick() {
       var statusCheck = $newItem.find('.status input');
       var status = 0;
       if (statusCheck.prop('checked'))
@@ -215,7 +241,65 @@ function Renderer(manager) {
         deadline: deadline,
         description: description
       });
+      $newItem.find('input,select').val('');
       self.inflate();
     });
   })($('.new'));
+  (function bindTitleBar($titleBar){//ソートバー
+    var $status = $titleBar.find('.status input');
+    var $title = $titleBar.find('.title');
+    var $priority = $titleBar.find('.priority');
+    var $deadline = $titleBar.find('.deadline');
+    var mod3 = 0;//2:all 0:un 1:done
+    $status.prop('checked', false).prop('indeterminate', true);
+    $status.on('change',function(){
+      if( mod3 === 0 ){
+        self.inflate(null,null,[{key: 'status', value: 1, result: true}]);
+        $(this).prop('checked', true).prop('indeterminate', false);
+      }else if( mod3 === 1 ){
+        self.inflate(null,null,[{key: 'status', value: 0, result: true}]);
+        $(this).prop('checked', false).prop('indeterminate', false);
+      }else{
+        self.inflate(null,null,[]);
+        $(this).prop('checked', false).prop('indeterminate', true);
+      }
+      mod3 = ++mod3 % 3;
+    });
+    var isTitleASC = false;
+    $title.on('click',function(){
+      if(isTitleASC){
+        self.inflate('title','DESC');
+        $(this).removeClass('ASC').addClass('DESC');
+        isTitleASC=false;
+      }else{
+        self.inflate('title','ASC');
+        $(this).removeClass('DESC').addClass('ASC');
+        isTitleASC=true;
+      }
+    });
+    var isPriorityASC = false;
+    $priority.on('click',function(){
+      if(isPriorityASC){
+        self.inflate('priority','DESC');
+        $(this).removeClass('ASC').addClass('DESC');
+        isPriorityASC=false;
+      }else{
+        self.inflate('priority','ASC');
+        $(this).removeClass('DESC').addClass('ASC');
+        isPriorityASC=true;
+      }
+    });
+    var isDeadlineASC = false;
+    $deadline.on('click',function(){
+      if(isDeadlineASC){
+        self.inflate('deadline','DESC');
+        $(this).removeClass('ASC').addClass('DESC');
+        isDeadlineASC=false;
+      }else{
+        self.inflate('deadline','ASC');
+        $(this).removeClass('DESC').addClass('ASC');
+        isDeadlineASC=true;
+      }
+    });
+  })($('.title_bar'));
 }

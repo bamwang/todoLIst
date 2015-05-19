@@ -9,8 +9,11 @@ function Manager() {
   //init
   this.load();
 }
+//tempなTaskを使って利用可能なキーを取る
 Manager.prototype.KEYS = Object.keys((new Task()).get());
+//STATUS取得
 Manager.prototype.STATUS = Task.prototype.STATUS;
+//dataをローカルストーレジに保存
 Manager.prototype.save = function save() {
   var self = this;
   var taskProperties = Object.keys(this._list_).map(function(key, index) {
@@ -22,6 +25,7 @@ Manager.prototype.save = function save() {
   var jsonStr = JSON.stringify(storage);
   localStorage.setItem('todo_' + this._id_, jsonStr);
 };
+//dataをローカルストーレジから
 Manager.prototype.load = function load() {
   var jsonStr = localStorage.getItem('todo_' + this._id_);
   if (jsonStr !== null) {
@@ -34,6 +38,7 @@ Manager.prototype.load = function load() {
     });
   }
 };
+//タスク情報を基づいてTaskを作成
 Manager.prototype.add = function add(inputedProperty) {
   var property = inputedProperty || {};
   property.id = property.id || this._order_.length;
@@ -42,6 +47,7 @@ Manager.prototype.add = function add(inputedProperty) {
   this._order_.push(property.id);
   this.save();
 };
+//キーと順番に元ついてソート
 Manager.prototype.sort = function sort(key, order) {
   if (this.KEYS.indexOf(key) === -1)
     throw new ReferenceError('Wrong key');
@@ -51,18 +57,24 @@ Manager.prototype.sort = function sort(key, order) {
   var newOrder = Object.keys(this._list_).sort(function(idA, idB) {
     var taskA = self._list_[idA];
     var taskB = self._list_[idB];
-    return (order === 'ASC') ? taskA[key] - taskB[key] : -taskA[key] + taskB[key];
+    var result = taskA.get()[key] - taskB.get()[key];
+    if(isNaN(result))//文字列の比較
+      result = taskA.get()[key] > taskB.get()[key];
+    else
+      return (order === 'ASC') ? result : -result;
+    return (order === 'ASC') && result ? 1 : -1;
   });
   this._order_ = newOrder;
   return this._order_;
 };
 Manager.prototype.getSomeIncludeDeleted = function getSomeIncludeDeleted(key, order, conditions) {
   if (key && order) {
-    this.sort(key, order);
+    var a = this.sort(key, order);
   }
   var self = this;
   var itemList = [];
-  for (var id in self._list_) {
+  for (var index in self._order_) {
+    var id = self._order_[index];
     var property = self._list_[id].get();
     var unmatched = conditions.some(filter);
     if (!unmatched)
